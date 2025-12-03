@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rent Price Aggregator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        input[type="text"], button {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        input[type="text"] {
+            flex-grow: 1;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #results {
+            margin-top: 20px;
+        }
+        .result-item {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .result-item strong {
+            color: #333;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .loading {
+            text-align: center;
+            font-style: italic;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Rent Price Aggregator</h1>
+        
+        <form id="search-form">
+            <input type="text" id="society" placeholder="Society Name (e.g., Hiranandani Gardens)" required>
+            <input type="text" id="city" placeholder="City (e.g., Mumbai)" required>
+            <button type="submit">Search Rents</button>
+        </form>
+
+        <div id="results">
+            <p class="loading">Enter a society and city to find rental prices.</p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('search-form').addEventListener('submit', async function(event) {
+            event.preventDefault(); // Stop the form from submitting the traditional way
+
+            const society = document.getElementById('society').value.trim();
+            const city = document.getElementById('city').value.trim();
+            const resultsDiv = document.getElementById('results');
+
+            if (!society || !city) return;
+
+            // 1. Show loading state
+            resultsDiv.innerHTML = '<p class="loading">Searching... This may take a moment due to live scraping.</p>';
+
+            // 2. Construct the API URL to call your Vercel function
+            // Vercel routes /api/search to your api/search.js function
+            const apiUrl = `/api/search?city=${encodeURIComponent(city)}&society=${encodeURIComponent(society)}`;
+
+            try {
+                // 3. Fetch data from your backend function
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+
+                // 4. Handle errors from the serverless function
+                if (!response.ok) {
+                    resultsDiv.innerHTML = `<p style="color: red;">Error: ${data.error || 'Failed to fetch data from the server.'}</p>`;
+                    return;
+                }
+
+                // 5. Display the results
+                resultsDiv.innerHTML = '';
+                
+                if (data.length === 0) {
+                    resultsDiv.innerHTML = '<p class="loading">No listings found for this search criteria.</p>';
+                } else {
+                    data.forEach(item => {
+                        const resultItem = document.createElement('div');
+                        resultItem.className = 'result-item';
+                        
+                        let priceHtml = `<strong>Rent: ${item.price || 'N/A'}</strong>`;
+                        let descriptionHtml = item.description || 'No description provided.';
+                        let sourceHtml = `<div>Source: ${item.source || 'Unknown'}</div>`;
+
+                        resultItem.innerHTML = priceHtml + descriptionHtml + sourceHtml;
+                        resultsDiv.appendChild(resultItem);
+                    });
+                }
+            } catch (error) {
+                // 6. Handle network/fetch errors
+                resultsDiv.innerHTML = `<p style="color: red;">Network Error: Could not connect to the server. ${error.message}</p>`;
+                console.error('Fetch error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
